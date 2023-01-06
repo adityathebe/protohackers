@@ -12,3 +12,8 @@ prime-test:
 2:
 	go build -o bin/meanstoanend -gcflags="-N -l" '2.means_to_an_end/main.go'
 	./bin/meanstoanend
+
+.PHONY: 3
+3:
+	go build -o bin/budgetchat -gcflags="-N -l" '3.budget-chat/main.go' '3.budget-chat/chatroom.go'
+	./bin/budgetchat
