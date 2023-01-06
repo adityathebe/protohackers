@@ -93,9 +93,6 @@ func main() {
 	}
 	defer listener.Close()
 
-	var clientStore map[int]*Store = make(map[int]*Store)
-	var clientIDctr int
-
 	for {
 		conn, err := listener.AcceptTCP()
 		if err != nil {
@@ -103,16 +100,15 @@ func main() {
 			continue
 		}
 
-		clientIDctr++
-		clientStore[clientIDctr] = &Store{}
-		log.Println("Handling client", clientIDctr)
-		go handleConn(conn, clientStore[clientIDctr])
+		go handleConn(conn)
 	}
 }
 
-func handleConn(conn *net.TCPConn, clientStore *Store) {
+func handleConn(conn *net.TCPConn) {
 	conn.SetDeadline(time.Now().Add(time.Minute * 5))
 	defer conn.Close()
+
+	clientStore := &Store{}
 
 	var buff []byte
 	for {
@@ -151,7 +147,7 @@ func handleConn(conn *net.TCPConn, clientStore *Store) {
 		case 'Q':
 			mean := clientStore.query(msg)
 			if err := binary.Write(conn, binary.BigEndian, mean); err != nil {
-				log.Println("Error writing mean")
+				log.Println("Error writing mean", err)
 			}
 		}
 	}
