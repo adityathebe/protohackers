@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"time"
@@ -29,24 +30,21 @@ func (t *Store) query(m Msg) int32 {
 	minTime := m.First
 	maxTime := m.Second
 
-	var recordsWithinRange []Record
+	var n int
+	var total int
 	for _, r := range t.records {
 		if r.Timestamp >= minTime && r.Timestamp <= maxTime {
-			recordsWithinRange = append(recordsWithinRange, r)
+			n++
+			total += int(r.Price)
 		}
 	}
 
-	if len(recordsWithinRange) == 0 {
+	if n == 0 {
 		return 0
 	}
 
 	// calculate mean
-	var total int64
-	for _, r := range recordsWithinRange {
-		total += int64(r.Price)
-	}
-
-	return int32(float64(total) / float64(len(recordsWithinRange)))
+	return int32(float64(total) / float64(n))
 }
 
 type Msg struct {
@@ -110,29 +108,16 @@ func handleConn(conn *net.TCPConn) {
 
 	clientStore := &Store{}
 
-	var buff []byte
+	var b = make([]byte, 9)
 	for {
-		var b = make([]byte, 9)
-		read, err := conn.Read(b)
+		_, err := io.ReadAtLeast(conn, b, 9)
 		if err != nil {
 			log.Printf("conn.Read(); %v", err)
 			return
 		}
 
-		buff = append(buff, b[:read]...)
-		if len(buff) < 9 {
-			continue
-		}
-
-		actualMsgBuff := buff[:9]
-		if len(buff) == 9 {
-			buff = make([]byte, 0)
-		} else {
-			buff = buff[10:]
-		}
-
 		var msg Msg
-		if err := msg.Decode(actualMsgBuff); err != nil {
+		if err := msg.Decode(b); err != nil {
 			log.Printf("could not decode [%v]; %v", b, err)
 			return
 		}
