@@ -7,11 +7,30 @@ import (
 	"log"
 	"math/big"
 	"net"
+	"strings"
 )
 
 type Request struct {
-	Method string `json:"method"`
-	Number int64  `json:"number"`
+	Method *string  `json:"method"`
+	Number *float64 `json:"number"`
+}
+
+func (r Request) isMalformed() bool {
+	if r.Method == nil {
+		log.Println("Malformed request. No method")
+		return true
+	}
+
+	if r.Number == nil {
+		log.Println("Malformed request. No Number")
+		return true
+	}
+
+	if *r.Method != "isPrime" {
+		return true
+	}
+
+	return false
 }
 
 type Response struct {
@@ -45,43 +64,61 @@ func main() {
 }
 
 func handleConn(conn *net.TCPConn) {
-	defer conn.Close()
+	defer func() {
+		log.Println("Closing connection")
+		conn.Close()
+	}()
 
-	malformedResonse, _ := json.Marshal(Response{})
-
-	var b = make([]byte, 1024*16)
+	var b = make([]byte, 256)
+	var msgBuffer string
 	for {
-		read, err := conn.Read(b)
-		if err != nil && !errors.Is(err, io.EOF) {
-			log.Printf("conn.Read(); %v", err)
+		len, err := conn.Read(b)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				log.Println("client connection closed")
+				return
+			}
+
+			log.Println("Something went wrong")
 			return
 		}
+
+		msgBuffer += string(b[:len])
+		idx := strings.Index(msgBuffer, "\n")
+		if idx < 0 {
+			continue
+		}
+
+		jsonMsg := msgBuffer[:idx]
+		newmsgbuffer := msgBuffer[idx+1:]
+		msgBuffer = newmsgbuffer
 
 		var req Request
-		if err := json.Unmarshal(b[:read], &req); err != nil {
-			log.Printf("malformed request(); %v", err)
-			conn.Write(malformedResonse)
+		if err := json.Unmarshal([]byte(jsonMsg), &req); err != nil {
+			log.Println("malformed request();", err)
+			conn.Write([]byte("nonsense"))
 			return
 		}
 
-		if req.Method == "isPrime" {
-			isPrime := big.NewInt(req.Number).ProbablyPrime(0)
-			resp := Response{
-				Method: "isPrime",
-				Prime:  isPrime,
-			}
-			encoder := json.NewEncoder(conn)
-			if err := encoder.Encode(resp); err != nil {
-				log.Printf("conn.Read(); %v", err)
-				continue
-			}
-		} else {
-			conn.Write(malformedResonse)
+		if req.isMalformed() {
+			log.Println("malformed request()")
+			conn.Write([]byte("nonsense"))
 			return
 		}
 
-		if errors.Is(err, io.EOF) {
-			break
+		var isPrime bool
+		if float64(int(*req.Number)) == *req.Number { // only check for prime if the number is an integer
+			isPrime = big.NewInt(int64(*req.Number)).ProbablyPrime(0)
+		}
+
+		resp := Response{
+			Method: "isPrime",
+			Prime:  isPrime,
+		}
+		encoder := json.NewEncoder(conn)
+		if err := encoder.Encode(resp); err != nil {
+			log.Printf("conn.Read(); %v\n", err)
+			continue
 		}
 	}
 }

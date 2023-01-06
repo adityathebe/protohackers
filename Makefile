@@ -4,5 +4,5 @@ smoke-test:
 
 .PHONY: prime-test
 prime-test:
-	go build -o bin/prime '1. prime_time/main.go'
+	go build -o bin/prime -gcflags="-N -l" '1. prime_time/main.go'
 	./bin/prime
