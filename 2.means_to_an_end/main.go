@@ -26,13 +26,18 @@ func (t *Store) insert(m Msg) {
 }
 
 func (t *Store) query(m Msg) int32 {
-	from := m.First
-	to := m.Second
+	minTime := m.First
+	maxTime := m.Second
+
 	var recordsWithinRange []Record
 	for _, r := range t.records {
-		if r.Timestamp >= from && r.Timestamp <= to {
+		if r.Timestamp >= minTime && r.Timestamp <= maxTime {
 			recordsWithinRange = append(recordsWithinRange, r)
 		}
+	}
+
+	if len(recordsWithinRange) == 0 {
+		return 0
 	}
 
 	// calculate mean
@@ -100,31 +105,44 @@ func main() {
 
 		clientIDctr++
 		clientStore[clientIDctr] = &Store{}
+		log.Println("Handling client", clientIDctr)
 		go handleConn(conn, clientStore[clientIDctr])
 	}
 }
 
 func handleConn(conn *net.TCPConn, clientStore *Store) {
-	conn.SetDeadline(time.Now().Add(time.Second * 10))
+	conn.SetDeadline(time.Now().Add(time.Minute * 5))
 	defer conn.Close()
 
-	var b = make([]byte, 9)
+	var buff []byte
 	for {
+		var b = make([]byte, 9)
 		read, err := conn.Read(b)
 		if err != nil {
 			log.Printf("conn.Read(); %v", err)
 			return
 		}
 
+		buff = append(buff, b[:read]...)
+		if len(buff) < 9 {
+			continue
+		}
+
+		actualMsgBuff := buff[:9]
+		if len(buff) == 9 {
+			buff = make([]byte, 0)
+		} else {
+			buff = buff[10:]
+		}
+
 		var msg Msg
-		if err := msg.Decode(b[:read]); err != nil {
-			log.Println("Client sent invalid msg")
+		if err := msg.Decode(actualMsgBuff); err != nil {
+			log.Printf("could not decode [%v]; %v", b, err)
 			return
 		}
 
 		if !msg.isTypeOk() {
-			log.Println("Client sent invalid msg")
-			return
+			continue
 		}
 
 		switch msg.Type {
