@@ -47,6 +47,8 @@ func main() {
 func handleConn(conn *net.TCPConn) {
 	defer conn.Close()
 
+	malformedResonse, _ := json.Marshal(Response{})
+
 	var b = make([]byte, 1024*16)
 	for {
 		read, err := conn.Read(b)
@@ -58,7 +60,8 @@ func handleConn(conn *net.TCPConn) {
 		var req Request
 		if err := json.Unmarshal(b[:read], &req); err != nil {
 			log.Printf("malformed request(); %v", err)
-			continue
+			conn.Write(malformedResonse)
+			return
 		}
 
 		if req.Method == "isPrime" {
@@ -72,6 +75,9 @@ func handleConn(conn *net.TCPConn) {
 				log.Printf("conn.Read(); %v", err)
 				continue
 			}
+		} else {
+			conn.Write(malformedResonse)
+			return
 		}
 
 		if errors.Is(err, io.EOF) {
