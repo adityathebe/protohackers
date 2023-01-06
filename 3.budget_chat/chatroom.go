@@ -74,7 +74,7 @@ func (t *Chatroom) sendMsg(username, msg string) {
 }
 
 func (t *Chatroom) announceDeparture(username string) {
-	welcomeMsg := fmt.Sprintf("* %s has has left the room\n", username)
+	welcomeMsg := fmt.Sprintf("* %s has left the room\n", username)
 	for activeUser, conn := range t.Users {
 		if activeUser != username {
 			conn.Write([]byte(welcomeMsg))
