@@ -69,7 +69,7 @@ func handleConn(conn *net.TCPConn) {
 		conn.Close()
 	}()
 
-	var b = make([]byte, 256)
+	var b = make([]byte, 4)
 	var msgBuffer string
 	for {
 		len, err := conn.Read(b)
