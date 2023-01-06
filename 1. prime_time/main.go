@@ -1,32 +1,25 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
-	"errors"
-	"io"
 	"log"
 	"math/big"
 	"net"
-	"strings"
 )
 
 type Request struct {
-	Method *string  `json:"method"`
+	Method string   `json:"method"`
 	Number *float64 `json:"number"`
 }
 
 func (r Request) isMalformed() bool {
-	if r.Method == nil {
-		log.Println("Malformed request. No method")
-		return true
-	}
-
 	if r.Number == nil {
 		log.Println("Malformed request. No Number")
 		return true
 	}
 
-	if *r.Method != "isPrime" {
+	if r.Method != "isPrime" {
 		return true
 	}
 
@@ -64,37 +57,12 @@ func main() {
 }
 
 func handleConn(conn *net.TCPConn) {
-	defer func() {
-		log.Println("Closing connection")
-		conn.Close()
-	}()
+	defer conn.Close()
 
-	var b = make([]byte, 4)
-	var msgBuffer string
-	for {
-		len, err := conn.Read(b)
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				log.Println("client connection closed")
-				return
-			}
-
-			log.Println("Something went wrong")
-			return
-		}
-
-		msgBuffer += string(b[:len])
-		idx := strings.Index(msgBuffer, "\n")
-		if idx < 0 {
-			continue
-		}
-
-		jsonMsg := msgBuffer[:idx]
-		newmsgbuffer := msgBuffer[idx+1:]
-		msgBuffer = newmsgbuffer
-
+	scanner := bufio.NewScanner(conn)
+	for scanner.Scan() {
 		var req Request
-		if err := json.Unmarshal([]byte(jsonMsg), &req); err != nil {
+		if err := json.Unmarshal([]byte(scanner.Text()), &req); err != nil {
 			log.Println("malformed request();", err)
 			conn.Write([]byte("nonsense"))
 			return
