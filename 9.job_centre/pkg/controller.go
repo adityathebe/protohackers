@@ -27,16 +27,21 @@ func (t *JobController) Leave(clientID int) {
 	t.locker.leave(clientID)
 }
 
-func (t *JobController) Put(qName string, priority int, content json.RawMessage) Job {
+func (t *JobController) Put(qName string, priority int, content json.RawMessage) *Job {
 	t.m.Lock()
 	q, ok := t.queues[qName]
 	if !ok {
-		q = newQueue(t.idGenerator)
+		q = newQueue(qName)
 		t.queues[qName] = q
 	}
 	t.m.Unlock()
 
-	job := q.put(qName, priority, content)
+	job := &Job{
+		ID:       t.idGenerator.gen(),
+		Priority: priority,
+		Content:  content,
+	}
+	q.putJob(job)
 	t.locker.announce()
 	return job
 }
@@ -77,7 +82,7 @@ func (t *JobController) Abort(clientID, jobID int) (bool, bool) {
 	}
 
 	t.m.Lock()
-	t.queues[releasedJob.qName].putWithID(releasedJob.qName, releasedJob.job.ID, releasedJob.job.Priority, releasedJob.job.Content)
+	t.queues[releasedJob.qName].putJob(releasedJob.job)
 	t.locker.announce()
 	t.m.Unlock()
 	return true, false
@@ -106,26 +111,21 @@ func (t *JobController) ReleaseActiveJobs(clientID int) {
 
 	t.m.Lock()
 	for _, aj := range releasedJobs {
-		t.queues[aj.qName].putWithID(aj.qName, aj.job.ID, aj.job.Priority, aj.job.Content)
+		t.queues[aj.qName].putJob(aj.job)
 	}
 	t.locker.announce()
 	t.m.Unlock()
 }
 
-func (t *JobController) addToActiveJobs(clientID int, qName string, queue *Queue, job *Job) {
-	aj := &activeJob{qName: qName, job: job}
-	t.activeJobs.add(clientID, aj)
-	queue.delete(job.ID)
-}
-
 func (t *JobController) get(clientID int, qNames []string) (*Job, string) {
-	var highestPriorityJob *Job
-	var correspondingQueue *Queue
-	var correspondingQueueName string
+	var (
+		highestPriorityJob *Job
+		correspondingQueue *Queue
+	)
+
+	t.m.Lock()
 	for _, qName := range qNames {
-		t.m.Lock()
 		q, ok := t.queues[qName]
-		t.m.Unlock()
 		if !ok {
 			continue
 		}
@@ -138,15 +138,19 @@ func (t *JobController) get(clientID int, qNames []string) (*Job, string) {
 		if highestPriorityJob == nil || h.Priority >= highestPriorityJob.Priority {
 			highestPriorityJob = h
 			correspondingQueue = q
-			correspondingQueueName = qName
 		}
+	}
+	t.m.Unlock()
+
+	if highestPriorityJob == nil {
+		return nil, ""
 	}
 
 	// If found, then remove the job from the queue
 	// And add it to the active jobs list
-	if highestPriorityJob != nil {
-		t.addToActiveJobs(clientID, correspondingQueueName, correspondingQueue, highestPriorityJob)
-	}
+	aj := &activeJob{qName: correspondingQueue.name, job: highestPriorityJob}
+	t.activeJobs.add(clientID, aj)
+	correspondingQueue.delete(highestPriorityJob.ID)
 
-	return highestPriorityJob, correspondingQueueName
+	return highestPriorityJob, correspondingQueue.name
 }

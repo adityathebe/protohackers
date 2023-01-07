@@ -1,21 +1,20 @@
 package pkg
 
 import (
-	"encoding/json"
 	"sync"
 )
 
 type Queue struct {
-	m           *sync.Mutex
-	jobs        map[int]*Job
-	idGenerator *jobIDGenerator
+	name string
+	m    *sync.Mutex
+	jobs map[int]*Job
 }
 
-func newQueue(idGenerator *jobIDGenerator) *Queue {
+func newQueue(name string) *Queue {
 	return &Queue{
-		m:           &sync.Mutex{},
-		idGenerator: idGenerator,
-		jobs:        make(map[int]*Job),
+		name: name,
+		m:    &sync.Mutex{},
+		jobs: make(map[int]*Job),
 	}
 }
 
@@ -32,23 +31,11 @@ func (t *Queue) delete(jobID int) bool {
 	return true
 }
 
-func (t *Queue) put(queue string, priority int, content json.RawMessage) Job {
-	id := t.idGenerator.gen()
-	j := t.putWithID(queue, id, priority, content)
-	return j
-}
-
-func (t *Queue) putWithID(queue string, id, priority int, content json.RawMessage) Job {
+func (t *Queue) putJob(j *Job) {
 	t.m.Lock()
 	defer t.m.Unlock()
 
-	j := Job{
-		ID:       id,
-		Priority: priority,
-		Content:  content,
-	}
-	t.jobs[id] = &j
-	return j
+	t.jobs[j.ID] = j
 }
 
 func (t *Queue) getHighestPriorityJob() *Job {
