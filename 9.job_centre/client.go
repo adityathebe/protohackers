@@ -82,10 +82,6 @@ func (t *client) handleConn() {
 			continue
 		}
 
-		if t.clientID == 4 || t.clientID == 5 || t.clientID == 6 || t.clientID == 7 {
-			log.Printf("Client [%d] || %s\n", t.clientID, r.Json())
-		}
-
 		t.requestChan <- r
 	}
 }
@@ -93,7 +89,7 @@ func (t *client) handleConn() {
 func (t *client) handleCommand(r pkg.Request) *pkg.Response {
 	switch r.Request {
 	case "put":
-		job := t.controller.Put(r.Queue, *r.Priority, r.Job)
+		job := t.controller.Put(r.Queue, *r.Priority, *r.Job)
 		return &pkg.Response{Status: "ok", ID: job.ID}
 
 	case "get":
@@ -105,7 +101,11 @@ func (t *client) handleCommand(r pkg.Request) *pkg.Response {
 		return &pkg.Response{Status: "ok", Queue: qName, Priority: job.Priority, ID: job.ID, Job: job.Content}
 
 	case "abort":
-		aborted := t.controller.Abort(t.clientID, *r.ID)
+		aborted, unauthorized := t.controller.Abort(t.clientID, *r.ID)
+		if unauthorized {
+			return &pkg.Response{Status: "error"}
+		}
+
 		if !aborted {
 			return &pkg.Response{Status: "no-job"}
 		}

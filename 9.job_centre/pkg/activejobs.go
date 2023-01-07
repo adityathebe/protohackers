@@ -29,19 +29,24 @@ func (t *activeJobsController) releaseAll(clientID int) []*activeJob {
 	return activeJobs
 }
 
-func (t *activeJobsController) release(clientID, jobID int) *activeJob {
+func (t *activeJobsController) release(requesterID, jobID int, authorizedOnly bool) (*activeJob, bool) {
 	t.m.Lock()
 	defer t.m.Unlock()
 
-	activeJobs := t.activeJobs[clientID]
-	for _, aj := range activeJobs {
-		if aj.job.ID == jobID {
-			delete(t.activeJobs, clientID)
-			return aj
+	for clientID, activeJobs := range t.activeJobs {
+		for _, aj := range activeJobs {
+			if aj.job.ID == jobID {
+				if authorizedOnly && requesterID != clientID {
+					return nil, true
+				}
+
+				delete(t.activeJobs, clientID)
+				return aj, false
+			}
 		}
 	}
 
-	return nil
+	return nil, false
 }
 
 func (t *activeJobsController) add(clientID int, aj *activeJob) {

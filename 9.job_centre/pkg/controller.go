@@ -66,17 +66,21 @@ func (t *JobController) IsWaiting(clientID int) bool {
 	return t.locker.isWaiting(clientID)
 }
 
-func (t *JobController) Abort(clientID, jobID int) bool {
-	releasedJob := t.activeJobs.release(clientID, jobID)
+func (t *JobController) Abort(clientID, jobID int) (bool, bool) {
+	releasedJob, unauthorized := t.activeJobs.release(clientID, jobID, true)
+	if unauthorized {
+		return false, true
+	}
+
 	if releasedJob == nil {
-		return false
+		return false, false
 	}
 
 	t.m.Lock()
 	t.queues[releasedJob.qName].putWithID(releasedJob.qName, releasedJob.job.ID, releasedJob.job.Priority, releasedJob.job.Content)
 	t.locker.announce()
 	t.m.Unlock()
-	return true
+	return true, false
 }
 
 func (t *JobController) Delete(clientID, jobID int) bool {
@@ -90,7 +94,10 @@ func (t *JobController) Delete(clientID, jobID int) bool {
 	}
 
 	// Maybe, it's in active jobs?
-	releasedJob := t.activeJobs.release(clientID, jobID)
+	releasedJob, unauthorized := t.activeJobs.release(clientID, jobID, false)
+	if unauthorized {
+		panic("should not happen")
+	}
 	return releasedJob != nil
 }
 
@@ -100,8 +107,8 @@ func (t *JobController) ReleaseActiveJobs(clientID int) {
 	t.m.Lock()
 	for _, aj := range releasedJobs {
 		t.queues[aj.qName].putWithID(aj.qName, aj.job.ID, aj.job.Priority, aj.job.Content)
-		t.locker.announce()
 	}
+	t.locker.announce()
 	t.m.Unlock()
 }
 

@@ -3,28 +3,29 @@ package pkg
 import "encoding/json"
 
 type Request struct {
-	Request  string          `json:"request,omitempty"` // "put", "get", "delet", "abort"
-	Queue    string          `json:"queue,omitempty"`
-	Queues   []string        `json:"queues,omitempty"`
-	Priority *int            `json:"pri,omitempty"`
-	Job      json.RawMessage `json:"job,omitempty"`
-	Wait     bool            `json:"wait,omitempty"`
-	ID       *int            `json:"id,omitempty"`
+	Request  string           `json:"request,omitempty"` // "put", "get", "delete", "abort"
+	Queue    string           `json:"queue,omitempty"`
+	Queues   []string         `json:"queues,omitempty"`
+	Priority *int             `json:"pri,omitempty"`
+	Job      *json.RawMessage `json:"job,omitempty"`
+	Wait     bool             `json:"wait,omitempty"`
+	ID       *int             `json:"id,omitempty"`
 }
 
 func (t *Request) IsValid() bool {
 	switch t.Request {
 	case "put":
-		if t.Priority == nil {
+		if t.Priority == nil || t.Queue == "" || t.Job == nil {
 			return false
 		}
 
-		if t.Queue == "" {
+		_, err := t.Job.MarshalJSON()
+		if err != nil {
 			return false
 		}
 
 	case "get":
-		if len(t.Queues) == 0 {
+		if t.Queues == nil || len(t.Queues) == 0 {
 			return false
 		}
 
