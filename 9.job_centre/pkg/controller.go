@@ -3,25 +3,28 @@ package pkg
 import (
 	"encoding/json"
 	"sync"
-	"time"
 )
 
 type JobController struct {
 	m           *sync.Mutex
-	m2          *sync.Mutex // mutex for active Jobs
 	queues      map[string]*Queue
 	idGenerator *jobIDGenerator
 	activeJobs  *activeJobsController
+	locker      *lock
 }
 
 func NewJobController() *JobController {
 	return &JobController{
 		m:           &sync.Mutex{},
-		m2:          &sync.Mutex{},
 		queues:      make(map[string]*Queue),
 		idGenerator: newJobIDGenerator(),
 		activeJobs:  newActiveJobsController(),
+		locker:      newLock(),
 	}
+}
+
+func (t *JobController) Leave(clientID int) {
+	t.locker.leave(clientID)
 }
 
 func (t *JobController) Put(qName string, priority int, content json.RawMessage) Job {
@@ -33,7 +36,9 @@ func (t *JobController) Put(qName string, priority int, content json.RawMessage)
 	}
 	t.m.Unlock()
 
-	return q.put(qName, priority, content)
+	job := q.put(qName, priority, content)
+	t.locker.announce()
+	return job
 }
 
 func (t *JobController) GetWithWait(clientID int, qNames []string, wait bool) (*Job, string) {
@@ -46,15 +51,14 @@ func (t *JobController) GetWithWait(clientID int, qNames []string, wait bool) (*
 		return nil, ""
 	}
 
-	// Instead of waiting for a second everytime,
-	// I could probably use channels to signal whenever something is put
-	// into the job queue.
 	for {
-		time.Sleep(time.Second)
-		job, qName := t.get(clientID, qNames)
-		if job != nil {
-			return job, qName
+		t.locker.wait(clientID)
+		job, qName = t.get(clientID, qNames)
+		if job == nil {
+			continue // keep waiting
 		}
+
+		return job, qName
 	}
 }
 
@@ -87,6 +91,7 @@ func (t *JobController) Delete(clientID, jobID int) bool {
 
 func (t *JobController) ReleaseActiveJobs(clientID int) {
 	releasedJobs := t.activeJobs.releaseAll(clientID)
+
 	t.m.Lock()
 	for _, aj := range releasedJobs {
 		t.queues[aj.qName].putWithID(aj.qName, aj.job.ID, aj.job.Priority, aj.job.Content)

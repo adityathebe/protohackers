@@ -35,35 +35,23 @@ func main() {
 
 func handleConn(conn net.Conn, clientID int, controller *pkg.JobController) {
 	defer func() {
+		log.Println("Cleanup", clientID)
 		conn.Close()
 		controller.ReleaseActiveJobs(clientID)
+		controller.Leave(clientID)
 	}()
 
-	writer := json.NewEncoder(conn)
 	scanner := bufio.NewScanner(conn)
 	for scanner.Scan() {
 		var r pkg.Request
-		if err := json.Unmarshal([]byte(scanner.Text()), &r); err != nil {
+		if err := json.Unmarshal([]byte(scanner.Text()), &r); err != nil || !r.IsValid() {
 			response := pkg.Response{Status: "error"}
-			if err := writer.Encode(response); err != nil {
-				log.Println("error sending response", err)
-			}
-			continue
-		}
-
-		if !r.IsValid() {
-			log.Println("Invalid request")
-			response := pkg.Response{Status: "error"}
-			if err := writer.Encode(response); err != nil {
-				log.Println("error sending response", err)
-			}
+			conn.Write(response.Json())
 			continue
 		}
 
 		response := handleCommand(clientID, controller, r)
-		if err := writer.Encode(response); err != nil {
-			log.Println("error sending response after handleCommand", err)
-		}
+		conn.Write(response.Json())
 	}
 }
 

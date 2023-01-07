@@ -52,3 +52,8 @@ type Response struct {
 	Priority int             `json:"pri,omitempty"`
 	Job      json.RawMessage `json:"job,omitempty"`
 }
+
+func (t Response) Json() []byte {
+	b, _ := json.Marshal(t)
+	return b
+}
