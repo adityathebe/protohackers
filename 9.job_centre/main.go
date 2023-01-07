@@ -21,7 +21,7 @@ func main() {
 	}
 	defer listener.Close()
 
-	jq := newJobQueue()
+	jq := newJobController()
 	for {
 		conn, err := listener.AcceptTCP()
 		if err != nil {
@@ -33,7 +33,7 @@ func main() {
 	}
 }
 
-func handleConn(conn *net.TCPConn, jq *jobQueue) {
+func handleConn(conn *net.TCPConn, jq *JobController) {
 	defer conn.Close()
 
 	writer := json.NewEncoder(conn)
@@ -64,7 +64,7 @@ func handleConn(conn *net.TCPConn, jq *jobQueue) {
 	}
 }
 
-func handleCommand(jq *jobQueue, r Request) Response {
+func handleCommand(jq *JobController, r Request) Response {
 	switch r.Request {
 	case "put":
 		job := jq.put(r.Queue, *r.Priority, r.Job)

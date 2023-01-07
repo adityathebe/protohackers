@@ -6,21 +6,21 @@ import (
 	"time"
 )
 
-type jobQueue struct {
+type JobController struct {
 	m           *sync.Mutex
 	queues      map[string]*Queue
 	idGenerator *jobIDGenerator
 }
 
-func newJobQueue() *jobQueue {
-	return &jobQueue{
+func newJobController() *JobController {
+	return &JobController{
 		m:           &sync.Mutex{},
 		queues:      make(map[string]*Queue),
 		idGenerator: newJobIDGenerator(),
 	}
 }
 
-func (t *jobQueue) put(qName string, priority int, content json.RawMessage) Job {
+func (t *JobController) put(qName string, priority int, content json.RawMessage) Job {
 	t.m.Lock()
 	q, ok := t.queues[qName]
 	if !ok {
@@ -32,7 +32,7 @@ func (t *jobQueue) put(qName string, priority int, content json.RawMessage) Job 
 	return q.put(qName, priority, content)
 }
 
-func (t *jobQueue) getWithWait(qNames []string, wait bool) (*Job, string) {
+func (t *JobController) getWithWait(qNames []string, wait bool) (*Job, string) {
 	job, qName := t.get(qNames)
 	if job != nil {
 		return job, qName
@@ -54,7 +54,7 @@ func (t *jobQueue) getWithWait(qNames []string, wait bool) (*Job, string) {
 	}
 }
 
-func (t *jobQueue) get(qNames []string) (*Job, string) {
+func (t *JobController) get(qNames []string) (*Job, string) {
 	var highestPriorityJob *Job
 	var correspondingQueue string
 	for _, qName := range qNames {
@@ -79,7 +79,7 @@ func (t *jobQueue) get(qNames []string) (*Job, string) {
 	return highestPriorityJob, correspondingQueue
 }
 
-func (t *jobQueue) abort(jobID int) bool {
+func (t *JobController) abort(jobID int) bool {
 	for i := range t.queues {
 		if t.queues[i].abort(jobID) {
 			return true
@@ -89,7 +89,7 @@ func (t *jobQueue) abort(jobID int) bool {
 	return false
 }
 
-func (t *jobQueue) delete(jobID int) bool {
+func (t *JobController) delete(jobID int) bool {
 	for i := range t.queues {
 		if t.queues[i].delete(jobID) {
 			return true
