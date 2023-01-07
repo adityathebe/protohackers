@@ -15,10 +15,15 @@
 
 .PHONY: 3
 3:
-	go build -o bin/budgetchat -gcflags="-N -l" '3.budget_chat/main.go' '3.budget_chat/chatroom.go'
+	go build -o bin/budgetchat -gcflags="-N -l"  github.com/adityathebe/protohackers/3.budget_chat
 	./bin/budgetchat
 
 .PHONY: 4
 4:
 	go build -o bin/unusualdatagramprotocol -gcflags="-N -l" '4.unusual_database_program/main.go'
 	./bin/unusualdatagramprotocol
+
+.PHONY: 9
+9:
+	go build -o bin/jobcentre -gcflags="-N -l" github.com/adityathebe/protohackers/9.job_centre
+	./bin/jobcentre
