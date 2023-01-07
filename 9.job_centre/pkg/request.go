@@ -1,4 +1,4 @@
-package main
+package pkg
 
 import "encoding/json"
 
@@ -12,7 +12,7 @@ type Request struct {
 	ID       *int            `json:"id,omitempty"`
 }
 
-func (t *Request) isValid() bool {
+func (t *Request) IsValid() bool {
 	switch t.Request {
 	case "put":
 		if t.Priority == nil {
@@ -38,6 +38,11 @@ func (t *Request) isValid() bool {
 	}
 
 	return true
+}
+
+func (t Request) String() string {
+	b, _ := json.Marshal(t)
+	return string(b)
 }
 
 type Response struct {

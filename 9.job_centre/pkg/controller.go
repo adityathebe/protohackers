@@ -1,4 +1,4 @@
-package main
+package pkg
 
 import (
 	"encoding/json"
@@ -19,7 +19,7 @@ type ActiveJob struct {
 	job   *Job
 }
 
-func newJobController() *JobController {
+func NewJobController() *JobController {
 	return &JobController{
 		m:           &sync.Mutex{},
 		queues:      make(map[string]*Queue),
@@ -28,7 +28,7 @@ func newJobController() *JobController {
 	}
 }
 
-func (t *JobController) put(qName string, priority int, content json.RawMessage) Job {
+func (t *JobController) Put(qName string, priority int, content json.RawMessage) Job {
 	t.m.Lock()
 	q, ok := t.queues[qName]
 	if !ok {
@@ -40,7 +40,7 @@ func (t *JobController) put(qName string, priority int, content json.RawMessage)
 	return q.put(qName, priority, content)
 }
 
-func (t *JobController) getWithWait(clientID int, qNames []string, wait bool) (*Job, string) {
+func (t *JobController) GetWithWait(clientID int, qNames []string, wait bool) (*Job, string) {
 	job, qName := t.get(clientID, qNames)
 	if job != nil {
 		return job, qName
@@ -62,6 +62,42 @@ func (t *JobController) getWithWait(clientID int, qNames []string, wait bool) (*
 	}
 }
 
+func (t *JobController) Abort(clientID, jobID int) bool {
+	for qName := range t.queues {
+		job := t.queues[qName].getByID(jobID)
+		if job == nil {
+			continue
+		}
+
+		t.activateJob(clientID, qName, t.queues[qName], job)
+	}
+
+	return false
+}
+
+func (t *JobController) Delete(jobID int) bool {
+	for i := range t.queues {
+		if t.queues[i].delete(jobID) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (t *JobController) ReleaseActiveJobs(clientID int) {
+	log.Printf("Releasing [%d] active jobs of client [%d]", len(t.activeJobs[clientID]), clientID)
+	for _, aj := range t.activeJobs[clientID] {
+		t.queues[aj.qName].putWithID(aj.qName, aj.job.ID, aj.job.Priority, aj.job.Content)
+	}
+}
+
+func (t *JobController) activateJob(clientID int, qName string, queue *Queue, job *Job) {
+	aj := &ActiveJob{qName: qName, job: job}
+	t.activeJobs[clientID] = append(t.activeJobs[clientID], aj)
+	queue.delete(job.ID)
+}
+
 func (t *JobController) get(clientID int, qNames []string) (*Job, string) {
 	var highestPriorityJob *Job
 	var correspondingQueue *Queue
@@ -79,7 +115,7 @@ func (t *JobController) get(clientID int, qNames []string) (*Job, string) {
 			continue
 		}
 
-		if highestPriorityJob == nil || highestPriorityJob.priority >= h.priority {
+		if highestPriorityJob == nil || highestPriorityJob.Priority >= h.Priority {
 			highestPriorityJob = h
 			correspondingQueue = q
 			correspondingQueueName = qName
@@ -93,40 +129,4 @@ func (t *JobController) get(clientID int, qNames []string) (*Job, string) {
 	}
 
 	return highestPriorityJob, correspondingQueueName
-}
-
-func (t *JobController) abort(clientID, jobID int) bool {
-	for qName := range t.queues {
-		job := t.queues[qName].getByID(jobID)
-		if job == nil {
-			continue
-		}
-
-		t.activateJob(clientID, qName, t.queues[qName], job)
-	}
-
-	return false
-}
-
-func (t *JobController) activateJob(clientID int, qName string, queue *Queue, job *Job) {
-	aj := &ActiveJob{qName: qName, job: job}
-	t.activeJobs[clientID] = append(t.activeJobs[clientID], aj)
-	queue.delete(job.id)
-}
-
-func (t *JobController) delete(jobID int) bool {
-	for i := range t.queues {
-		if t.queues[i].delete(jobID) {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (t *JobController) releaseActiveJobs(clientID int) {
-	log.Printf("Releasing [%d] active jobs of client [%d]", len(t.activeJobs[clientID]), clientID)
-	for _, aj := range t.activeJobs[clientID] {
-		t.queues[aj.qName].putWithID(aj.qName, aj.job.id, aj.job.priority, aj.job.content)
-	}
 }

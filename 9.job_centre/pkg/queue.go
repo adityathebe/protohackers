@@ -1,4 +1,4 @@
-package main
+package pkg
 
 import (
 	"encoding/json"
@@ -50,9 +50,9 @@ func (t *Queue) putWithID(queue string, id, priority int, content json.RawMessag
 	defer t.m.Unlock()
 
 	j := Job{
-		id:       id,
-		priority: priority,
-		content:  content,
+		ID:       id,
+		Priority: priority,
+		Content:  content,
 	}
 	t.jobs[id] = &j
 	return j
@@ -68,7 +68,7 @@ func (t *Queue) getHighestPriorityJob() *Job {
 
 	var highestPriorityJob *Job
 	for _, job := range t.jobs {
-		if highestPriorityJob == nil || job.priority >= highestPriorityJob.priority {
+		if highestPriorityJob == nil || job.Priority >= highestPriorityJob.Priority {
 			highestPriorityJob = job
 		}
 	}

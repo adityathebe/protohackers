@@ -1,4 +1,4 @@
-package main
+package pkg
 
 import (
 	"encoding/json"
@@ -6,9 +6,9 @@ import (
 )
 
 type Job struct {
-	id       int
-	content  json.RawMessage
-	priority int
+	ID       int
+	Content  json.RawMessage
+	Priority int
 }
 
 type jobIDGenerator struct {
