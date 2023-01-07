@@ -73,7 +73,7 @@ func main() {
 			continue
 		}
 
-		go sendResponse(store, conn, addr, strings.TrimSpace(string(b[:read])))
+		go sendResponse(store, conn, addr, string(b[:read]))
 	}
 }
 
