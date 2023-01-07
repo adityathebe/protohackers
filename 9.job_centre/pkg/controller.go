@@ -62,6 +62,10 @@ func (t *JobController) GetWithWait(clientID int, qNames []string, wait bool) (*
 	}
 }
 
+func (t *JobController) IsWaiting(clientID int) bool {
+	return t.locker.isWaiting(clientID)
+}
+
 func (t *JobController) Abort(clientID, jobID int) bool {
 	releasedJob := t.activeJobs.release(clientID, jobID)
 	if releasedJob == nil {
@@ -70,6 +74,7 @@ func (t *JobController) Abort(clientID, jobID int) bool {
 
 	t.m.Lock()
 	t.queues[releasedJob.qName].putWithID(releasedJob.qName, releasedJob.job.ID, releasedJob.job.Priority, releasedJob.job.Content)
+	t.locker.announce()
 	t.m.Unlock()
 	return true
 }
@@ -95,11 +100,12 @@ func (t *JobController) ReleaseActiveJobs(clientID int) {
 	t.m.Lock()
 	for _, aj := range releasedJobs {
 		t.queues[aj.qName].putWithID(aj.qName, aj.job.ID, aj.job.Priority, aj.job.Content)
+		t.locker.announce()
 	}
 	t.m.Unlock()
 }
 
-func (t *JobController) activateJob(clientID int, qName string, queue *Queue, job *Job) {
+func (t *JobController) addToActiveJobs(clientID int, qName string, queue *Queue, job *Job) {
 	aj := &activeJob{qName: qName, job: job}
 	t.activeJobs.add(clientID, aj)
 	queue.delete(job.ID)
@@ -132,7 +138,7 @@ func (t *JobController) get(clientID int, qNames []string) (*Job, string) {
 	// If found, then remove the job from the queue
 	// And add it to the active jobs list
 	if highestPriorityJob != nil {
-		t.activateJob(clientID, correspondingQueueName, correspondingQueue, highestPriorityJob)
+		t.addToActiveJobs(clientID, correspondingQueueName, correspondingQueue, highestPriorityJob)
 	}
 
 	return highestPriorityJob, correspondingQueueName

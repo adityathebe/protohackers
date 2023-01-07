@@ -40,7 +40,7 @@ func (t *Request) IsValid() bool {
 	return true
 }
 
-func (t Request) String() string {
+func (t Request) Json() string {
 	b, _ := json.Marshal(t)
 	return string(b)
 }

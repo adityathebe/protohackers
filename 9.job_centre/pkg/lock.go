@@ -1,6 +1,6 @@
 package pkg
 
-import "fmt"
+import "log"
 
 type lock struct {
 	listeners map[int]chan struct{}
@@ -18,9 +18,14 @@ func (t *lock) announce() {
 	}
 }
 
+func (t *lock) isWaiting(clientID int) bool {
+	_, ok := t.listeners[clientID]
+	return ok
+}
+
 func (t *lock) leave(clientID int) {
-	fmt.Println("broadcast:: leaving", clientID)
-	defer fmt.Println("broadcast:: left", clientID)
+	log.Println("loc:: leaving", clientID)
+	defer log.Println("loc:: left", clientID)
 
 	ch, ok := t.listeners[clientID]
 	if !ok {
@@ -32,8 +37,8 @@ func (t *lock) leave(clientID int) {
 }
 
 func (t *lock) wait(clientID int) {
-	fmt.Println("broadcast:: wait", clientID)
-	defer fmt.Println("broadcast:: wait over", clientID)
+	log.Println("loc:: wait", clientID)
+	defer log.Println("loc:: wait over", clientID)
 
 	ch := make(chan struct{}, 1)
 	t.listeners[clientID] = ch
