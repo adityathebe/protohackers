@@ -17,3 +17,8 @@
 3:
 	go build -o bin/budgetchat -gcflags="-N -l" '3.budget_chat/main.go' '3.budget_chat/chatroom.go'
 	./bin/budgetchat
+
+.PHONY: 4
+4:
+	go build -o bin/unusualdatagramprotocol -gcflags="-N -l" '4.unusual_database_program/main.go'
+	./bin/unusualdatagramprotocol
