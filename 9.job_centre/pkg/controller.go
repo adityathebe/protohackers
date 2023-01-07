@@ -117,7 +117,7 @@ func (t *JobController) get(clientID int, qNames []string) (*Job, string) {
 			continue
 		}
 
-		if highestPriorityJob == nil || highestPriorityJob.Priority >= h.Priority {
+		if highestPriorityJob == nil || h.Priority >= highestPriorityJob.Priority {
 			highestPriorityJob = h
 			correspondingQueue = q
 			correspondingQueueName = qName
