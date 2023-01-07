@@ -7,7 +7,7 @@ import (
 
 type Queue struct {
 	m           *sync.Mutex
-	jobs        map[int]*job
+	jobs        map[int]*Job
 	idGenerator *jobIDGenerator
 }
 
@@ -15,7 +15,7 @@ func newQueue(idGenerator *jobIDGenerator) *Queue {
 	return &Queue{
 		m:           &sync.Mutex{},
 		idGenerator: idGenerator,
-		jobs:        make(map[int]*job),
+		jobs:        make(map[int]*Job),
 	}
 }
 
@@ -47,12 +47,12 @@ func (t *Queue) abort(jobID int) bool {
 	return true
 }
 
-func (t *Queue) put(queue string, priority int, content json.RawMessage) job {
+func (t *Queue) put(queue string, priority int, content json.RawMessage) Job {
 	t.m.Lock()
 	defer t.m.Unlock()
 
 	id := t.idGenerator.gen()
-	j := job{
+	j := Job{
 		id:       id,
 		priority: priority,
 		content:  content,
@@ -61,7 +61,7 @@ func (t *Queue) put(queue string, priority int, content json.RawMessage) job {
 	return j
 }
 
-func (t *Queue) getHighestPriorityJob() *job {
+func (t *Queue) getHighestPriorityJob() *Job {
 	t.m.Lock()
 	defer t.m.Unlock()
 
@@ -69,7 +69,7 @@ func (t *Queue) getHighestPriorityJob() *job {
 		return nil
 	}
 
-	var highestPriorityJob *job
+	var highestPriorityJob *Job
 	for _, job := range t.jobs {
 		if highestPriorityJob == nil || job.priority >= highestPriorityJob.priority {
 			highestPriorityJob = job

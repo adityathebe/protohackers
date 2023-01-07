@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"sync"
+	"time"
 )
 
 type jobQueue struct {
@@ -19,27 +20,47 @@ func newJobQueue() *jobQueue {
 	}
 }
 
-func (t *jobQueue) put(qName string, priority int, content json.RawMessage) job {
+func (t *jobQueue) put(qName string, priority int, content json.RawMessage) Job {
 	t.m.Lock()
-	defer t.m.Unlock()
-
 	q, ok := t.queues[qName]
 	if !ok {
 		q = newQueue(t.idGenerator)
 		t.queues[qName] = q
 	}
+	t.m.Unlock()
 
 	return q.put(qName, priority, content)
 }
 
-func (t *jobQueue) get(queues []string, wait bool) (*job, string) {
-	t.m.Lock()
-	defer t.m.Unlock()
+func (t *jobQueue) getWithWait(qNames []string, wait bool) (*Job, string) {
+	job, qName := t.get(qNames)
+	if job != nil {
+		return job, qName
+	}
 
-	var highestPriorityJob *job
+	if !wait {
+		return nil, ""
+	}
+
+	// Instead of waiting for a second everytime,
+	// I could probably use channels to signal whenever something is put
+	// into the job queue.
+	for {
+		time.Sleep(time.Second)
+		job, qName := t.get(qNames)
+		if job != nil {
+			return job, qName
+		}
+	}
+}
+
+func (t *jobQueue) get(qNames []string) (*Job, string) {
+	var highestPriorityJob *Job
 	var correspondingQueue string
-	for _, qName := range queues {
+	for _, qName := range qNames {
+		t.m.Lock()
 		q, ok := t.queues[qName]
+		t.m.Unlock()
 		if !ok {
 			continue
 		}

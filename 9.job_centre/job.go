@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-type job struct {
+type Job struct {
 	id              int
 	content         json.RawMessage
 	priority        int

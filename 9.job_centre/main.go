@@ -71,7 +71,7 @@ func handleCommand(jq *jobQueue, r Request) Response {
 		return Response{Status: "ok", ID: job.id}
 
 	case "get":
-		job, qName := jq.get(r.Queues, r.Wait)
+		job, qName := jq.getWithWait(r.Queues, r.Wait)
 		if job == nil {
 			return Response{Status: "no-job"}
 		}
