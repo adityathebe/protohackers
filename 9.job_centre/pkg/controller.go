@@ -2,29 +2,25 @@ package pkg
 
 import (
 	"encoding/json"
-	"log"
 	"sync"
 	"time"
 )
 
 type JobController struct {
 	m           *sync.Mutex
+	m2          *sync.Mutex // mutex for active Jobs
 	queues      map[string]*Queue
 	idGenerator *jobIDGenerator
-	activeJobs  map[int][]*ActiveJob
-}
-
-type ActiveJob struct {
-	qName string
-	job   *Job
+	activeJobs  *activeJobsController
 }
 
 func NewJobController() *JobController {
 	return &JobController{
 		m:           &sync.Mutex{},
+		m2:          &sync.Mutex{},
 		queues:      make(map[string]*Queue),
 		idGenerator: newJobIDGenerator(),
-		activeJobs:  make(map[int][]*ActiveJob),
+		activeJobs:  newActiveJobsController(),
 	}
 }
 
@@ -63,38 +59,44 @@ func (t *JobController) GetWithWait(clientID int, qNames []string, wait bool) (*
 }
 
 func (t *JobController) Abort(clientID, jobID int) bool {
-	for qName := range t.queues {
-		job := t.queues[qName].getByID(jobID)
-		if job == nil {
-			continue
-		}
-
-		t.activateJob(clientID, qName, t.queues[qName], job)
+	releasedJob := t.activeJobs.release(clientID, jobID)
+	if releasedJob == nil {
+		return false
 	}
 
-	return false
+	t.m.Lock()
+	t.queues[releasedJob.qName].putWithID(releasedJob.qName, releasedJob.job.ID, releasedJob.job.Priority, releasedJob.job.Content)
+	t.m.Unlock()
+	return true
 }
 
-func (t *JobController) Delete(jobID int) bool {
+func (t *JobController) Delete(clientID, jobID int) bool {
+	t.m.Lock()
+	defer t.m.Unlock()
+
 	for i := range t.queues {
 		if t.queues[i].delete(jobID) {
 			return true
 		}
 	}
 
-	return false
+	// Maybe, it's in active jobs?
+	releasedJob := t.activeJobs.release(clientID, jobID)
+	return releasedJob != nil
 }
 
 func (t *JobController) ReleaseActiveJobs(clientID int) {
-	log.Printf("Releasing [%d] active jobs of client [%d]", len(t.activeJobs[clientID]), clientID)
-	for _, aj := range t.activeJobs[clientID] {
+	releasedJobs := t.activeJobs.releaseAll(clientID)
+	t.m.Lock()
+	for _, aj := range releasedJobs {
 		t.queues[aj.qName].putWithID(aj.qName, aj.job.ID, aj.job.Priority, aj.job.Content)
 	}
+	t.m.Unlock()
 }
 
 func (t *JobController) activateJob(clientID int, qName string, queue *Queue, job *Job) {
-	aj := &ActiveJob{qName: qName, job: job}
-	t.activeJobs[clientID] = append(t.activeJobs[clientID], aj)
+	aj := &activeJob{qName: qName, job: job}
+	t.activeJobs.add(clientID, aj)
 	queue.delete(job.ID)
 }
 

@@ -90,7 +90,7 @@ func handleCommand(clientID int, controller *pkg.JobController, r pkg.Request) p
 		return pkg.Response{Status: "ok"}
 
 	case "delete":
-		deleted := controller.Delete(*r.ID)
+		deleted := controller.Delete(clientID, *r.ID)
 		if !deleted {
 			return pkg.Response{Status: "no-job"}
 		}
