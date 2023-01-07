@@ -6,10 +6,9 @@ import (
 )
 
 type Job struct {
-	id              int
-	content         json.RawMessage
-	priority        int
-	isBeingWorkedOn bool
+	id       int
+	content  json.RawMessage
+	priority int
 }
 
 type jobIDGenerator struct {

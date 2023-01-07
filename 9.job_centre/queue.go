@@ -32,26 +32,23 @@ func (t *Queue) delete(jobID int) bool {
 	return true
 }
 
-func (t *Queue) abort(jobID int) bool {
+func (t *Queue) getByID(jobID int) *Job {
 	t.m.Lock()
 	defer t.m.Unlock()
 
-	job, found := t.jobs[jobID]
-	if !found {
-		return false
-	}
-
-	job.isBeingWorkedOn = false
-	t.jobs[jobID] = job
-
-	return true
+	return t.jobs[jobID]
 }
 
 func (t *Queue) put(queue string, priority int, content json.RawMessage) Job {
+	id := t.idGenerator.gen()
+	j := t.putWithID(queue, id, priority, content)
+	return j
+}
+
+func (t *Queue) putWithID(queue string, id, priority int, content json.RawMessage) Job {
 	t.m.Lock()
 	defer t.m.Unlock()
 
-	id := t.idGenerator.gen()
 	j := Job{
 		id:       id,
 		priority: priority,
