@@ -1,4 +1,4 @@
-package pkg
+package jobcentre
 
 import "encoding/json"
 

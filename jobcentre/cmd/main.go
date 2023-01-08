@@ -4,7 +4,8 @@ import (
 	"log"
 	"net"
 
-	"github.com/adityathebe/protohackers/9.job_centre/pkg"
+	"github.com/adityathebe/protohackers/jobcentre/client"
+	"github.com/adityathebe/protohackers/jobcentre/queue"
 )
 
 func main() {
@@ -19,7 +20,7 @@ func main() {
 
 	log.Println("Started listening on", addr)
 
-	controller := pkg.NewJobController()
+	queue := queue.NewQueue()
 	var clientID int
 	for {
 		conn, err := listener.Accept()
@@ -29,7 +30,7 @@ func main() {
 		}
 
 		clientID++
-		client := newClient(clientID, conn, controller)
-		go client.start()
+		client := client.NewClient(clientID, conn, queue)
+		go client.Start()
 	}
 }
