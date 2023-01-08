@@ -25,5 +25,5 @@
 
 .PHONY: 9
 9:
-	go build -o bin/jobcentre -gcflags="-N -l" github.com/adityathebe/protohackers/jobcentre/cmd/...
+	go build -o bin/jobcentre -gcflags="all=-N -l" github.com/adityathebe/protohackers/jobcentre/cmd/...
 	./bin/jobcentre

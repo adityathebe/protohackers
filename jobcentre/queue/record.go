@@ -7,7 +7,7 @@ import (
 type Record struct {
 	Job        *jobcentre.Job
 	QName      string
-	workedOnBy *int
+	assignedTo *int
 }
 
 func newRecord(qName string, job *jobcentre.Job) *Record {

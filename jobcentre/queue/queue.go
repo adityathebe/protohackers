@@ -57,15 +57,15 @@ func (t *Queue) Abort(clientID, jobID int, shouldAuthorize bool) (aborted bool, 
 
 	for i, r := range t.records {
 		if r.Job.ID == jobID {
-			if r.workedOnBy == nil {
+			if r.assignedTo == nil {
 				return false, nil
 			}
 
-			if shouldAuthorize && *r.workedOnBy != clientID {
+			if shouldAuthorize && *r.assignedTo != clientID {
 				return false, errors.New("unauthorized_to_abort")
 			}
 
-			t.records[i].workedOnBy = nil
+			t.records[i].assignedTo = nil
 			t.announce()
 			return true, nil
 		}
@@ -93,8 +93,8 @@ func (t *Queue) ReleaseActiveJobs(clientID int) {
 	defer t.m.Unlock()
 
 	for i, r := range t.records {
-		if r.workedOnBy != nil && *r.workedOnBy == clientID {
-			t.records[i].workedOnBy = nil
+		if r.assignedTo != nil && *r.assignedTo == clientID {
+			t.records[i].assignedTo = nil
 		}
 	}
 
@@ -111,7 +111,7 @@ func (t *Queue) Get(clientID int, qNames []string) *Record {
 			continue
 		}
 
-		if (response == nil || r.Job.Priority >= response.Job.Priority) && r.workedOnBy == nil {
+		if (response == nil || r.Job.Priority >= response.Job.Priority) && r.assignedTo == nil {
 			response = r
 		}
 	}
@@ -122,7 +122,7 @@ func (t *Queue) Get(clientID int, qNames []string) *Record {
 
 	// If found, then remove the job from the queue
 	// And add it to the active jobs list
-	response.workedOnBy = &clientID
+	response.assignedTo = &clientID
 	return response
 }
 

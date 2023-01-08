@@ -56,5 +56,5 @@ type Response struct {
 
 func (t Response) Json() []byte {
 	b, _ := json.Marshal(t)
-	return b
+	return append(b, []byte("\n")...)
 }

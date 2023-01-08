@@ -19,6 +19,7 @@ type client struct {
 	responseChan chan *jobcentre.Response
 	ctx          context.Context
 	done         context.CancelFunc
+	logger       *logger
 }
 
 func NewClient(clientID int, conn net.Conn, queue *queue.Queue) *client {
@@ -31,6 +32,7 @@ func NewClient(clientID int, conn net.Conn, queue *queue.Queue) *client {
 		responseChan: make(chan *jobcentre.Response),      // unbuffered because we want response in order
 		ctx:          ctx,
 		done:         cancel,
+		logger:       newLog(clientID),
 	}
 }
 
@@ -105,6 +107,8 @@ func (t *client) handleConn() {
 
 func (t *client) handleRequest(r jobcentre.Request, ch chan<- *jobcentre.Response) {
 	defer close(ch)
+
+	t.logger.write(r.Json() + "\n")
 
 	switch r.Request {
 	case "put":
