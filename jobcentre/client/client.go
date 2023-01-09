@@ -19,7 +19,7 @@ type client struct {
 	responseChan chan *jobcentre.Response
 	ctx          context.Context
 	done         context.CancelFunc
-	logger       *logger
+	// logger       *logger
 }
 
 func NewClient(clientID int, conn net.Conn, queue *queue.Queue) *client {
@@ -32,7 +32,7 @@ func NewClient(clientID int, conn net.Conn, queue *queue.Queue) *client {
 		responseChan: make(chan *jobcentre.Response),      // unbuffered because we want response in order
 		ctx:          ctx,
 		done:         cancel,
-		logger:       newLog(clientID),
+		// logger:       newLog(clientID),
 	}
 }
 
@@ -47,6 +47,7 @@ func (t *client) Close() {
 	log.Println("Closing client", t.clientID)
 	t.queue.ReleaseActiveJobs(t.clientID)
 	t.conn.Close()
+	t.queue.Unsubscribe(t.clientID)
 	t.done()
 }
 
@@ -108,7 +109,7 @@ func (t *client) handleConn() {
 func (t *client) handleRequest(r jobcentre.Request, ch chan<- *jobcentre.Response) {
 	defer close(ch)
 
-	t.logger.write(r.Json() + "\n")
+	// t.logger.write(r.Json() + "\n")
 
 	switch r.Request {
 	case "put":
@@ -131,7 +132,6 @@ func (t *client) handleRequest(r jobcentre.Request, ch chan<- *jobcentre.Respons
 			for {
 				select {
 				case <-t.ctx.Done():
-					t.queue.Unsubscribe(t.clientID)
 					log.Println("Aborting listening on queue")
 					ch <- nil
 					return
@@ -139,7 +139,6 @@ func (t *client) handleRequest(r jobcentre.Request, ch chan<- *jobcentre.Respons
 				case <-qChan:
 					record := t.queue.Get(t.clientID, r.Queues)
 					if record != nil {
-						t.queue.Unsubscribe(t.clientID)
 						ch <- &jobcentre.Response{Status: "ok", Queue: record.QName, Priority: record.Job.Priority, ID: record.Job.ID, Job: record.Job.Content}
 						return
 					}

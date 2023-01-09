@@ -50,7 +50,7 @@ type Response struct {
 	Status   string          `json:"status"` // "ok", "error", or "no-job".
 	ID       int             `json:"id,omitempty"`
 	Queue    string          `json:"queue,omitempty"`
-	Priority int             `json:"pri,omitempty"`
+	Priority int             `json:"pri"`
 	Job      json.RawMessage `json:"job,omitempty"`
 }
 
