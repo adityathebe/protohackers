@@ -28,6 +28,11 @@
 	go build -o bin/mobinthemiddle -gcflags="all=-N -l" '5.mob_in_the_middle/main.go'
 	./bin/mobinthemiddle
 
+.PHONY: 6
+6:
+	go build -o bin/speeddaemon -gcflags="all=-N -l" 'github.com/adityathebe/protohackers/6.speed_daemon/...'
+	./bin/speeddaemon
+
 .PHONY: 9
 9:
 	go build -o bin/jobcentre -gcflags="all=-N -l" github.com/adityathebe/protohackers/jobcentre/cmd/...
