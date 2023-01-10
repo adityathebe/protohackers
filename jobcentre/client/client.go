@@ -120,7 +120,7 @@ func (t *client) handleRequest(r jobcentre.Request, ch chan<- *jobcentre.Respons
 	case "get":
 		record := t.queue.Get(t.clientID, r.Queues)
 		if record != nil {
-			ch <- &jobcentre.Response{Status: "ok", Queue: record.QName, Priority: record.Job.Priority, ID: record.Job.ID, Job: record.Job.Content}
+			ch <- &jobcentre.Response{Status: "ok", Queue: record.QName, Priority: record.Priority, ID: record.ID, Job: record.Content}
 			return
 		} else {
 			if !r.Wait {
@@ -139,7 +139,7 @@ func (t *client) handleRequest(r jobcentre.Request, ch chan<- *jobcentre.Respons
 				case <-qChan:
 					record := t.queue.Get(t.clientID, r.Queues)
 					if record != nil {
-						ch <- &jobcentre.Response{Status: "ok", Queue: record.QName, Priority: record.Job.Priority, ID: record.Job.ID, Job: record.Job.Content}
+						ch <- &jobcentre.Response{Status: "ok", Queue: record.QName, Priority: record.Priority, ID: record.ID, Job: record.Content}
 						return
 					}
 				}
