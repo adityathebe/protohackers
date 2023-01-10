@@ -7,7 +7,8 @@ import (
 	"io"
 	"log"
 	"net"
-	"time"
+
+	"github.com/adityathebe/protohackers"
 )
 
 type Record struct {
@@ -78,34 +79,10 @@ func (t *Msg) isTypeOk() bool {
 }
 
 func main() {
-	addr := ":3723"
-	network := "tcp"
-	laddr, err := net.ResolveTCPAddr(network, addr)
-	if err != nil {
-		log.Fatalf("net.ResolveTCPAddr(); %v", err)
-	}
-
-	listener, err := net.ListenTCP(network, laddr)
-	if err != nil {
-		log.Fatalf("net.ListenTCP(); %v", err)
-	}
-	defer listener.Close()
-
-	for {
-		conn, err := listener.AcceptTCP()
-		if err != nil {
-			log.Printf("listener.AcceptTCP(); %v", err)
-			continue
-		}
-
-		go handleConn(conn)
-	}
+	protohackers.StartTCPServer(handleConn)
 }
 
 func handleConn(conn *net.TCPConn) {
-	conn.SetDeadline(time.Now().Add(time.Minute * 5))
-	defer conn.Close()
-
 	clientStore := &Store{}
 
 	var b = make([]byte, 9)

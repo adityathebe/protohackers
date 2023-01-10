@@ -6,6 +6,8 @@ import (
 	"log"
 	"math/big"
 	"net"
+
+	"github.com/adityathebe/protohackers"
 )
 
 type Request struct {
@@ -32,33 +34,10 @@ type Response struct {
 }
 
 func main() {
-	addr := ":3723"
-	network := "tcp"
-	laddr, err := net.ResolveTCPAddr(network, addr)
-	if err != nil {
-		log.Fatalf("net.ResolveTCPAddr(); %v", err)
-	}
-
-	listener, err := net.ListenTCP(network, laddr)
-	if err != nil {
-		log.Fatalf("net.ListenTCP(); %v", err)
-	}
-	defer listener.Close()
-
-	for {
-		conn, err := listener.AcceptTCP()
-		if err != nil {
-			log.Printf("listener.AcceptTCP(); %v", err)
-			continue
-		}
-
-		go handleConn(conn)
-	}
+	protohackers.StartTCPServer(handleConn)
 }
 
 func handleConn(conn *net.TCPConn) {
-	defer conn.Close()
-
 	scanner := bufio.NewScanner(conn)
 	for scanner.Scan() {
 		var req Request

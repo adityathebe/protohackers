@@ -6,6 +6,8 @@ import (
 	"log"
 	"net"
 	"strings"
+
+	"github.com/adityathebe/protohackers"
 )
 
 const (
@@ -16,26 +18,10 @@ const (
 )
 
 func main() {
-	listener, err := net.Listen(network, addr)
-	if err != nil {
-		log.Fatalf("net.Listen(); %v", err)
-	}
-	defer listener.Close()
-
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			log.Printf("listener.Accept(); %v", err)
-			continue
-		}
-
-		go handleConn(conn)
-	}
+	protohackers.StartTCPServer(handleConn)
 }
 
-func handleConn(conn net.Conn) {
-	defer conn.Close()
-
+func handleConn(conn *net.TCPConn) {
 	// Establish connection with the upstream server
 	upstream, err := net.Dial(network, upstreamServer)
 	if err != nil {

@@ -2,45 +2,23 @@ package main
 
 import (
 	"bufio"
-	"log"
 	"net"
 	"strings"
+
+	"github.com/adityathebe/protohackers"
 )
 
+var chatroom = newChatroom()
+
 func main() {
-	addr := ":3723"
-	network := "tcp"
-	laddr, err := net.ResolveTCPAddr(network, addr)
-	if err != nil {
-		log.Fatalf("net.ResolveTCPAddr(); %v", err)
-	}
-
-	listener, err := net.ListenTCP(network, laddr)
-	if err != nil {
-		log.Fatalf("net.ListenTCP(); %v", err)
-	}
-	defer listener.Close()
-
-	chatroom := newChatroom()
-
-	for {
-		conn, err := listener.AcceptTCP()
-		if err != nil {
-			log.Printf("listener.AcceptTCP(); %v", err)
-			continue
-		}
-
-		go handleConn(conn, chatroom)
-	}
+	protohackers.StartTCPServer(handleConn)
 }
 
 const (
 	maxUsernameLen = 20
 )
 
-func handleConn(conn *net.TCPConn, chatroom *Chatroom) {
-	defer conn.Close()
-
+func handleConn(conn *net.TCPConn) {
 	// 1. Set the username
 	conn.Write([]byte("Welcome to budgetchat! What shall I call you?\n"))
 	usernameB := make([]byte, maxUsernameLen)
