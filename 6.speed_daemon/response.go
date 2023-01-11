@@ -2,11 +2,8 @@ package main
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/binary"
-	"encoding/gob"
-	"encoding/hex"
-	"log"
+	"fmt"
 )
 
 type ResponseType uint8
@@ -30,13 +27,8 @@ type TicketMsg struct {
 type TicketHash string
 
 func (t TicketMsg) Hash() TicketHash {
-	var b bytes.Buffer
-	if err := gob.NewEncoder(&b).Encode(t); err != nil {
-		log.Fatal("error encoding gob", err)
-	}
-
-	hash := sha256.Sum256(b.Bytes())
-	return TicketHash(hex.EncodeToString(hash[:]))
+	s := fmt.Sprintf("%s%d%d%d%d%d%d", t.Plate, t.Road, t.Mile1, t.Timestamp1, t.Mile2, t.Timestamp2, t.Speed)
+	return TicketHash(s)
 }
 
 type Response struct {

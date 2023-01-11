@@ -45,11 +45,11 @@ func handleConn(conn *net.TCPConn) {
 	for {
 		r, err := DecodeRequest(conn)
 		if err != nil {
-			log.Printf("DecodeRequest(); [%v] %v\n", r, err)
 			return
 		}
 
 		// Identify first
+		var justIdentified bool
 		if identity == nil && r.Type != WantHeartbeat {
 			switch r.Type {
 			case IAmCamera:
@@ -62,6 +62,7 @@ func handleConn(conn *net.TCPConn) {
 				sendErr(conn, "please identify yourself")
 				return
 			}
+			justIdentified = true
 		}
 
 		switch r.Type {
@@ -103,11 +104,21 @@ func handleConn(conn *net.TCPConn) {
 				return
 			}
 
+			if !justIdentified {
+				sendErr(conn, "you have already identified yourself")
+				return
+			}
+
 			store.SaveSpeedLimit(r.Camera.road, r.Camera.limit)
 
 		case IAmDispatcher:
 			if identity.isCamera {
 				sendErr(conn, "you are a camera")
+				return
+			}
+
+			if !justIdentified {
+				sendErr(conn, "you have already identified yourself")
 				return
 			}
 
@@ -141,7 +152,7 @@ func detectOverSpeeding(road, speedLimit uint16, plateName string, plateRecords 
 		distance := dist(plateRecords[i].mile, plateRecords[i-1].mile)
 		duration := plateRecords[i].timestamp - plateRecords[i-1].timestamp
 		mph := (float64(distance)) / (float64(duration) / 3600)
-		if mph > float64(speedLimit) {
+		if mph-float64(speedLimit) >= 0.1 {
 			overSpeed = append(overSpeed, TicketMsg{
 				Plate:      plateName,
 				Mile1:      plateRecords[i-1].mile,

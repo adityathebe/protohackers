@@ -72,7 +72,7 @@ func (t *DispatcherStore) Dispatch(tickets []TicketMsg) {
 
 		if _, ok := t.issued[hash]; ok {
 			log.Printf("Ticket has already been dispatched [%s] [%v]\n", hash, ticket)
-			return
+			continue
 		}
 
 		if _, ok := t.pending[ticket.Road]; !ok {
