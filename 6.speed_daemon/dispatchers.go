@@ -13,23 +13,33 @@ type DispatcherClient struct {
 }
 
 type DispatcherStore struct {
-	mu           *sync.Mutex
-	dispatcher   map[int]*DispatcherClient
-	roadMaps     map[uint16][]*DispatcherClient
-	issued       map[TicketHash]struct{}
-	issuedPerDay map[string]map[int]struct{}
-	pending      map[uint16]map[TicketHash]TicketMsg // pending stores all tickets to be dispatched per road
+	dispatcherIDGlobal int
+	mu                 *sync.Mutex
+	dispatcher         map[int]*DispatcherClient
+	roadMaps           map[uint16][]*DispatcherClient
+	issued             map[TicketHash]struct{}
+	issuedPerDay       map[string]map[int]struct{}
+	pending            map[uint16]map[TicketHash]TicketMsg // pending stores all tickets to be dispatched per road
 }
 
 func newDispatcherStore() *DispatcherStore {
 	return &DispatcherStore{
-		mu:           &sync.Mutex{},
-		dispatcher:   make(map[int]*DispatcherClient),
-		roadMaps:     make(map[uint16][]*DispatcherClient),
-		issued:       make(map[TicketHash]struct{}),
-		issuedPerDay: make(map[string]map[int]struct{}),
-		pending:      make(map[uint16]map[TicketHash]TicketMsg),
+		dispatcherIDGlobal: 0,
+		mu:                 &sync.Mutex{},
+		dispatcher:         make(map[int]*DispatcherClient),
+		roadMaps:           make(map[uint16][]*DispatcherClient),
+		issued:             make(map[TicketHash]struct{}),
+		issuedPerDay:       make(map[string]map[int]struct{}),
+		pending:            make(map[uint16]map[TicketHash]TicketMsg),
 	}
+}
+
+func (t *DispatcherStore) getDispatcherID() int {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	t.dispatcherIDGlobal++
+	return t.dispatcherIDGlobal
 }
 
 func (t *DispatcherStore) Register(id int, conn net.Conn, roads []uint16) {

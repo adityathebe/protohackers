@@ -12,8 +12,6 @@ import (
 var (
 	store           *Store
 	dispatcherStore *DispatcherStore
-
-	clientIDGlobal int
 )
 
 // Cameras report to you
@@ -26,10 +24,10 @@ func main() {
 }
 
 type clientIdentity struct {
-	id       int
-	isCamera bool
-	Camera   CameraReq
-	Dispatch DispatcherReq
+	dispatcherID int
+	isCamera     bool
+	Camera       CameraReq
+	Dispatch     DispatcherReq
 }
 
 func handleConn(conn *net.TCPConn) {
@@ -40,7 +38,7 @@ func handleConn(conn *net.TCPConn) {
 
 	defer func() {
 		if identity != nil && !identity.isCamera {
-			dispatcherStore.Unregister(identity.id)
+			dispatcherStore.Unregister(identity.dispatcherID)
 		}
 	}()
 
@@ -55,12 +53,10 @@ func handleConn(conn *net.TCPConn) {
 		if identity == nil && r.Type != WantHeartbeat {
 			switch r.Type {
 			case IAmCamera:
-				clientIDGlobal++
-				identity = &clientIdentity{id: clientIDGlobal, isCamera: true, Camera: r.Camera}
+				identity = &clientIdentity{isCamera: true, Camera: r.Camera}
 				log.Printf("Identified as Camera 📷. [road=%d mile=%d limit=%d]\n", r.Camera.road, r.Camera.mile, r.Camera.limit)
 			case IAmDispatcher:
-				clientIDGlobal++
-				identity = &clientIdentity{id: clientIDGlobal, isCamera: false, Dispatch: r.Dispatch}
+				identity = &clientIdentity{dispatcherID: dispatcherStore.getDispatcherID(), isCamera: false, Dispatch: r.Dispatch}
 				log.Printf("Identified as Dispatcher 🎫. [%v]\n", r.Dispatch)
 			default:
 				sendErr(conn, "please identify yourself")
@@ -115,7 +111,7 @@ func handleConn(conn *net.TCPConn) {
 				return
 			}
 
-			dispatcherStore.Register(identity.id, conn, r.Dispatch.roads)
+			dispatcherStore.Register(identity.dispatcherID, conn, r.Dispatch.roads)
 		}
 	}
 }
