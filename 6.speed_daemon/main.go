@@ -88,14 +88,17 @@ func handleConn(conn *net.TCPConn) {
 			}
 
 			if r.Heartbeat != 0 {
-				res := Response{Type: Heartbeat}
-				for {
-					if _, err := conn.Write(res.Encode()); err != nil {
-						return
-					}
+				go func() {
+					res := Response{Type: Heartbeat}
+					duration := getDurationFromDeciseconds(r.Heartbeat)
+					for {
+						if _, err := conn.Write(res.Encode()); err != nil {
+							return
+						}
 
-					time.Sleep(getDurationFromDeciseconds(r.Heartbeat))
-				}
+						time.Sleep(duration)
+					}
+				}()
 			}
 
 		case IAmCamera:
@@ -112,7 +115,6 @@ func handleConn(conn *net.TCPConn) {
 				return
 			}
 
-			// Register dispatchers
 			dispatcherStore.Register(identity.id, conn, r.Dispatch.roads)
 		}
 	}
