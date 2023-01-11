@@ -33,6 +33,11 @@
 	go build -o bin/speeddaemon -gcflags="all=-N -l" 'github.com/adityathebe/protohackers/6.speed_daemon/...'
 	./bin/speeddaemon
 
+.PHONY: 7
+7:
+	go build -o bin/lrcp -gcflags="all=-N -l" 'github.com/adityathebe/protohackers/7.line_reversal/...'
+	./bin/lrcp
+
 .PHONY: 9
 9:
 	go build -o bin/jobcentre -gcflags="all=-N -l" github.com/adityathebe/protohackers/jobcentre/cmd/...
